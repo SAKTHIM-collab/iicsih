@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Genesis Registrations</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #6c63ff;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #6c63ff;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .btn {
+            background: #6c63ff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .btn:hover {
+            background: #554fd8;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Genesis 2025 - Admin Dashboard</h1>
+        <button class="btn" onclick="loadRegistrations()">Refresh Data</button>
+        <button class="btn" onclick="exportToCSV()">Export to CSV</button>
+        
+        <div id="registrations-container">
+            <div class="loading">Loading registrations...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadRegistrations() {
+            try {
+                const response = await fetch('/api/registrations');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayRegistrations(result.data);
+                } else {
+                    document.getElementById('registrations-container').innerHTML = 
+                        '<div class="error">Error loading data: ' + result.message + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('registrations-container').innerHTML = 
+                    '<div class="error">Error: ' + error.message + '</div>';
+            }
+        }
+
+        function displayRegistrations(data) {
+            if (data.length === 0) {
+                document.getElementById('registrations-container').innerHTML = 
+                    '<div class="no-data">No registrations found.</div>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Team/Startup</th>
+                            <th>Idea Brief</th>
+                            <th>Registration Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.forEach(reg => {
+                html += `
+                    <tr>
+                        <td>${reg.name}</td>
+                        <td>${reg.email}</td>
+                        <td>${reg.phone}</td>
+                        <td>${reg.team}</td>
+                        <td>${reg.idea}</td>
+                        <td>${new Date(reg.registrationDate).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+                <p>Total registrations: ${data.length}</p>
+            `;
+
+            document.getElementById('registrations-container').innerHTML = html;
+        }
+
+        function exportToCSV() {
+            fetch('/api/registrations')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        const data = result.data;
+                        if (data.length === 0) {
+                            alert('No data to export');
+                            return;
+                        }
+
+                        // Create CSV content
+                        let csv = 'Name,Email,Phone,Team/Startup,Idea Brief,Registration Date\n';
+                        
+                        data.forEach(reg => {
+                            csv += `"${reg.name}","${reg.email}","${reg.phone}","${reg.team}","${reg.idea.replace(/"/g, '""')}","${new Date(reg.registrationDate).toLocaleString()}"\n`;
+                        });
+
+                        // Create download link
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.setAttribute('hidden', '');
+                        a.setAttribute('href', url);
+                        a.setAttribute('download', 'genesis_registrations.csv');
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } else {
+                        alert('Error exporting data: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+        }
+
+        // Load registrations when page loads
+        document.addEventListener('DOMContentLoaded', loadRegistrations);
+    </script>
+</body>
+</html>
